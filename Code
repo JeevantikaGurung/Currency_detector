@@ -1,0 +1,75 @@
+from google.colab import drive
+drive.mount('/content/drive')
+
+!git clone https://github.com/WongKinYiu/yolov7
+%cd yolov7
+!pip install -r requirements.txt
+
+import zipfile
+zip_ref = zipfile.ZipFile('/content/drive/MyDrive/yolov7 currency dataset/dataset.zip', 'r')
+zip_ref.extractall('/content')
+zip_ref.close()
+
+from PIL import Image
+import os
+
+def convert_to_grayscale(input_folder, output_folder):
+    # Create the output folder if it doesn't exist
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+
+    # Get a list of all files in the input folder
+    files = os.listdir(input_folder)
+
+    for file in files:
+        # Check if the file is an image
+        if file.endswith('.jpg') or file.endswith('.jpeg') or file.endswith('.png'):
+            # Open the image file
+            image_path = os.path.join(input_folder, file)
+            img = Image.open(image_path)
+
+            # Convert the image to grayscale
+            grayscale_img = img.convert('L')
+
+            # Save the grayscale image to the output folder
+            output_path = os.path.join(output_folder, file)
+            grayscale_img.save(output_path)
+
+            print(f"Converted {file} to grayscale and saved as {output_path}")
+
+# Training image
+input_folder = '/content/images/train'
+output_folder = '/content/images_rgb/train'
+
+# Call the function to convert the images to grayscale
+convert_to_grayscale(input_folder, output_folder)
+
+train_img_path = "/content/images_rgb/train"
+val_img_path = "/content/images_rgb/val"
+
+%cd /content
+
+#Training images
+with open('train.txt', "a+") as f:
+  img_list = os.listdir(train_img_path)
+  for img in img_list:
+    f.write(os.path.join(train_img_path,img+'\n'))
+  print("Done")
+
+# Validation Image
+with open('val.txt', "a+") as f:
+  img_list = os.listdir(val_img_path)
+  for img in img_list:
+    f.write(os.path.join(val_img_path,img+'\n'))
+  print("Done")
+
+%cp /content/yolov7/data/coco.yaml /content/yolov7/data/custom.yaml
+
+# download COCO starting checkpoint
+%cd /content/yolov7
+!wget "https://github.com/WongKinYiu/yolov7/releases/download/v0.1/yolov7.pt"
+
+%cp /content/yolov7/cfg/training/yolov7.yaml /content/yolov7/cfg/training/custom_yolov7.yaml
+
+!python train.py --batch 32 --cfg cfg/training/custom_yolov7.yaml --epochs 1000 --data /content/yolov7/data/custom.yaml --weights 'yolov7.pt' 
+
